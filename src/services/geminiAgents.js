@@ -4,13 +4,13 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 let ai = null;
 const getAI = () => {
-    if (!ai) {
-        if (!API_KEY || API_KEY === 'your_gemini_api_key_here') {
-            throw new Error('Gemini API key not configured. Add your key to .env as VITE_GEMINI_API_KEY');
-        }
-        ai = new GoogleGenAI({ apiKey: API_KEY });
+  if (!ai) {
+    if (!API_KEY || API_KEY === 'your_gemini_api_key_here') {
+      throw new Error('Gemini API key not configured. Add your key to .env as VITE_GEMINI_API_KEY');
     }
-    return ai;
+    ai = new GoogleGenAI({ apiKey: API_KEY });
+  }
+  return ai;
 };
 
 /* ─────────────────────────────────────────────────
@@ -18,7 +18,7 @@ const getAI = () => {
 ─────────────────────────────────────────────────*/
 
 const PROMPTS = {
-    diagnostic: (data) => `You are a business operations analyst. Analyze this small business and produce a comprehensive health diagnostic.
+  diagnostic: (data) => `You are a business operations analyst. Analyze this small business and produce a comprehensive health diagnostic.
 
 BUSINESS DATA:
 - Company: ${data.companyName}
@@ -82,7 +82,7 @@ RESPOND WITH ONLY VALID JSON (no markdown, no code fences) matching this exact s
 
 Score fairly based on what you see. Be specific in insights — reference their actual tools, processes, and data. Quick wins should include dollar estimates where possible.`,
 
-    moneyLeaks: (data) => `You are a cost optimization specialist. Analyze this business's spending to find waste, duplicates, and savings opportunities.
+  moneyLeaks: (data) => `You are a cost optimization specialist. Analyze this business's spending to find waste, duplicates, and savings opportunities.
 
 BUSINESS DATA:
 - Company: ${data.companyName}
@@ -126,7 +126,7 @@ RESPOND WITH ONLY VALID JSON (no markdown, no code fences) matching this exact s
 
 For "duplicate" leaks, include "tools" array. For "underutilized", include "tool", "monthlyCost", "usage". Always include monthlySavings. Be specific with dollar amounts.`,
 
-    sopBuilder: (data) => `You are an operations consultant specializing in process documentation. Generate 3 structured Standard Operating Procedures (SOPs) from the business processes described below.
+  sopBuilder: (data) => `You are an operations consultant specializing in process documentation. Generate 3 structured Standard Operating Procedures (SOPs) from the business processes described below.
 
 BUSINESS DATA:
 - Company: ${data.companyName}
@@ -169,7 +169,7 @@ RESPOND WITH ONLY VALID JSON (no markdown, no code fences) matching this exact s
   ]
 }`,
 
-    leadAutomation: (data) => `You are a sales automation specialist. Design a multi-touch follow-up sequence for this business's lead nurturing.
+  leadAutomation: (data) => `You are a sales automation specialist. Design a multi-touch follow-up sequence for this business's lead nurturing.
 
 BUSINESS DATA:
 - Company: ${data.companyName}
@@ -195,6 +195,7 @@ INSTRUCTIONS:
 4. Write actual message content (subject lines + bodies)
 5. Use {{name}} and {{company}} as merge fields
 6. Each touch should have a clear purpose
+7. Generate 5 dummy CRM clients (realistic names, companies, industries, and goals)
 
 RESPOND WITH ONLY VALID JSON (no markdown, no code fences) matching this exact schema:
 {
@@ -214,10 +215,21 @@ RESPOND WITH ONLY VALID JSON (no markdown, no code fences) matching this exact s
     "openRate": "<range, e.g. 45-55%>",
     "replyRate": "<range, e.g. 15-22%>",
     "conversionRate": "<range, e.g. 8-12%>"
-  }
+  },
+  "dummyClients": [
+    {
+      "name": "<realistic first and last name>",
+      "company": "<company name>",
+      "email": "<realistic email>",
+      "industry": "<industry>",
+      "goals": "<1-2 sentence business goal>",
+      "notes": "<AI-generated observation about this lead>",
+      "status": "new"
+    }
+  ]
 }`,
 
-    growthPlan: (data, diagnosticOutput, moneyLeaksOutput) => `You are a business growth strategist. Using the diagnostic scores and money leak findings below, create a prioritized 30/60/90 day operational improvement plan.
+  growthPlan: (data, diagnosticOutput, moneyLeaksOutput) => `You are a business growth strategist. Using the diagnostic scores and money leak findings below, create a prioritized 30/60/90 day operational improvement plan.
 
 BUSINESS DATA:
 - Company: ${data.companyName}
@@ -270,23 +282,23 @@ RESPOND WITH ONLY VALID JSON (no markdown, no code fences) matching this exact s
 ─────────────────────────────────────────────────*/
 
 async function callGemini(prompt) {
-    const genAI = getAI();
-    const response = await genAI.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: prompt,
-    });
+  const genAI = getAI();
+  const response = await genAI.models.generateContent({
+    model: 'gemini-2.0-flash',
+    contents: prompt,
+  });
 
-    let text = response.text;
+  let text = response.text;
 
-    // Strip markdown code fences if Gemini wraps the JSON
-    text = text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+  // Strip markdown code fences if Gemini wraps the JSON
+  text = text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
 
-    try {
-        return JSON.parse(text);
-    } catch (e) {
-        console.error('Failed to parse Gemini response:', text);
-        throw new Error('Invalid JSON from Gemini. Raw response: ' + text.substring(0, 200));
-    }
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('Failed to parse Gemini response:', text);
+    throw new Error('Invalid JSON from Gemini. Raw response: ' + text.substring(0, 200));
+  }
 }
 
 /* ─────────────────────────────────────────────────
@@ -301,52 +313,52 @@ async function callGemini(prompt) {
  * @returns {Object} all results keyed by module id
  */
 export async function runAnalysis(intakeData, onModuleComplete) {
-    const results = {};
+  const results = {};
 
-    // === PHASE 1: 4 agents in parallel ===
-    const phase1 = await Promise.allSettled([
-        callGemini(PROMPTS.diagnostic(intakeData))
-            .then(data => { results.diagnostic = data; onModuleComplete?.('diagnostic', data); return data; }),
+  // === PHASE 1: 4 agents in parallel ===
+  const phase1 = await Promise.allSettled([
+    callGemini(PROMPTS.diagnostic(intakeData))
+      .then(data => { results.diagnostic = data; onModuleComplete?.('diagnostic', data); return data; }),
 
-        callGemini(PROMPTS.moneyLeaks(intakeData))
-            .then(data => { results.moneyLeaks = data; onModuleComplete?.('money-leaks', data); return data; }),
+    callGemini(PROMPTS.moneyLeaks(intakeData))
+      .then(data => { results.moneyLeaks = data; onModuleComplete?.('money-leaks', data); return data; }),
 
-        callGemini(PROMPTS.sopBuilder(intakeData))
-            .then(data => { results.sops = data; onModuleComplete?.('sop-builder', data); return data; }),
+    callGemini(PROMPTS.sopBuilder(intakeData))
+      .then(data => { results.sops = data; onModuleComplete?.('sop-builder', data); return data; }),
 
-        callGemini(PROMPTS.leadAutomation(intakeData))
-            .then(data => { results.leadAutomation = data; onModuleComplete?.('lead-auto', data); return data; }),
-    ]);
+    callGemini(PROMPTS.leadAutomation(intakeData))
+      .then(data => { results.leadAutomation = data; onModuleComplete?.('lead-auto', data); return data; }),
+  ]);
 
-    // Log any Phase 1 failures
-    phase1.forEach((result, idx) => {
-        if (result.status === 'rejected') {
-            const names = ['diagnostic', 'moneyLeaks', 'sopBuilder', 'leadAutomation'];
-            console.error(`Agent ${names[idx]} failed:`, result.reason);
-        }
-    });
-
-    // === PHASE 2: Growth Plan (needs diagnostic + money leaks) ===
-    if (results.diagnostic && results.moneyLeaks) {
-        try {
-            const growthPlan = await callGemini(
-                PROMPTS.growthPlan(intakeData, results.diagnostic, results.moneyLeaks)
-            );
-            results.growthPlan = growthPlan;
-            onModuleComplete?.('growth-plan', growthPlan);
-        } catch (e) {
-            console.error('Growth Plan agent failed:', e);
-        }
-    } else {
-        console.warn('Skipping Growth Plan — diagnostic or money leaks failed');
+  // Log any Phase 1 failures
+  phase1.forEach((result, idx) => {
+    if (result.status === 'rejected') {
+      const names = ['diagnostic', 'moneyLeaks', 'sopBuilder', 'leadAutomation'];
+      console.error(`Agent ${names[idx]} failed:`, result.reason);
     }
+  });
 
-    return results;
+  // === PHASE 2: Growth Plan (needs diagnostic + money leaks) ===
+  if (results.diagnostic && results.moneyLeaks) {
+    try {
+      const growthPlan = await callGemini(
+        PROMPTS.growthPlan(intakeData, results.diagnostic, results.moneyLeaks)
+      );
+      results.growthPlan = growthPlan;
+      onModuleComplete?.('growth-plan', growthPlan);
+    } catch (e) {
+      console.error('Growth Plan agent failed:', e);
+    }
+  } else {
+    console.warn('Skipping Growth Plan — diagnostic or money leaks failed');
+  }
+
+  return results;
 }
 
 /**
  * Check if the API key is configured.
  */
 export function isApiKeyConfigured() {
-    return API_KEY && API_KEY !== 'your_gemini_api_key_here';
+  return API_KEY && API_KEY !== 'your_gemini_api_key_here';
 }

@@ -1,6 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { Shield, Zap, AlertTriangle, CheckCircle2, TrendingDown, TrendingUp } from 'lucide-react';
+import { Shield, Zap, AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Mail, Loader2, Send } from 'lucide-react';
+import { sendExecutionPayload, isWebhookConfigured } from '../../services/webhookService';
+import { buildEmailHtml } from '../../services/emailTemplates';
 
 const statusConfig = {
     stable: { color: '#18C37E', bg: '#18C37E12', label: 'Stable', icon: CheckCircle2 },
@@ -8,10 +10,13 @@ const statusConfig = {
     critical: { color: '#EF4444', bg: '#EF444412', label: 'Critical', icon: TrendingDown },
 };
 
-const DiagnosticModule = ({ data }) => {
+const DiagnosticModule = ({ data, recipientEmail, branding }) => {
     const scoreRingRef = useRef(null);
     const barsRef = useRef([]);
     const scoreNumRef = useRef(null);
+
+    // Execution layer state
+    const [sendStatus, setSendStatus] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
 
     useEffect(() => {
         if (!data) return;
@@ -64,6 +69,31 @@ const DiagnosticModule = ({ data }) => {
         });
     }, [data]);
 
+    // Handle sending the diagnostic email
+    const handleSendReport = async () => {
+        if (!recipientEmail || sendStatus === 'sending') return;
+
+        setSendStatus('sending');
+        try {
+            const emailHtml = buildEmailHtml('health-diagnostic', data, branding);
+            const subject = `Weekly Health Diagnostic — ${branding.companyName}`;
+
+            await sendExecutionPayload('health-diagnostic', recipientEmail, branding, {
+                emailHtml,
+                subject,
+                overallScore: data.overallScore,
+                categories: data.categories,
+                quickWins: data.quickWins,
+                risks: data.risks,
+            });
+
+            setSendStatus('sent');
+        } catch (err) {
+            console.error('[DiagnosticModule] Send failed:', err);
+            setSendStatus('error');
+        }
+    };
+
     if (!data) return null;
 
     const scoreColor = data.overallScore >= 75 ? '#18C37E' : data.overallScore >= 50 ? '#F5A524' : '#EF4444';
@@ -71,6 +101,75 @@ const DiagnosticModule = ({ data }) => {
 
     return (
         <div className="space-y-6">
+            {/* ═══════════ EXECUTION LAYER: Weekly Health Report ═══════════ */}
+            {isWebhookConfigured() && (
+                <div
+                    className="rounded-2xl border shadow-sm p-6 transition-all duration-300"
+                    style={{
+                        borderColor: sendStatus === 'sent' ? '#18C37E40' : (branding?.primaryColor || '#2C3FB8') + '20',
+                        backgroundColor: sendStatus === 'sent' ? '#18C37E08' : '#ffffff',
+                    }}
+                >
+                    <div className="flex items-start gap-4">
+                        <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{
+                                backgroundColor: sendStatus === 'sent' ? '#18C37E15' : (branding?.primaryColor || '#2C3FB8') + '12',
+                            }}
+                        >
+                            {sendStatus === 'sent' ? (
+                                <CheckCircle2 size={20} className="text-emerald-500" />
+                            ) : (
+                                <Mail size={20} style={{ color: branding?.primaryColor || '#2C3FB8' }} />
+                            )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-sbos-navy">
+                                {sendStatus === 'sent' ? 'Health report sent!' : 'Activate Weekly Health Report'}
+                            </h3>
+                            <p className="text-xs text-sbos-slate mt-0.5 leading-relaxed">
+                                {sendStatus === 'sent'
+                                    ? `Report delivered to ${recipientEmail}. Check your inbox.`
+                                    : 'Get this diagnostic delivered to your inbox as a branded weekly report preview.'}
+                            </p>
+
+                            {sendStatus === 'error' && (
+                                <p className="text-xs text-red-500 mt-1.5 font-medium">
+                                    Something went wrong. Please try again.
+                                </p>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={handleSendReport}
+                            disabled={sendStatus === 'sending' || sendStatus === 'sent' || !recipientEmail}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white transition-all duration-200 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                                backgroundColor: sendStatus === 'sent' ? '#18C37E' : (branding?.primaryColor || '#2C3FB8'),
+                            }}
+                            onMouseEnter={(e) => { if (sendStatus === 'idle' || sendStatus === 'error') e.currentTarget.style.transform = 'scale(1.03)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                        >
+                            {sendStatus === 'sending' && <Loader2 size={14} className="animate-spin" />}
+                            {sendStatus === 'sent' && <CheckCircle2 size={14} />}
+                            {sendStatus === 'idle' && <Send size={14} />}
+                            {sendStatus === 'error' && <Send size={14} />}
+                            {sendStatus === 'sending' ? 'Sending...'
+                                : sendStatus === 'sent' ? 'Sent ✓'
+                                    : sendStatus === 'error' ? 'Retry'
+                                        : 'Send Report'}
+                        </button>
+                    </div>
+
+                    {!recipientEmail && sendStatus === 'idle' && (
+                        <p className="text-[10px] text-amber-500 mt-3 ml-14">
+                            No email provided during intake. Go back and add your email to enable this feature.
+                        </p>
+                    )}
+                </div>
+            )}
+
             {/* Score + Categories Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Overall Score Card */}

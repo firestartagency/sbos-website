@@ -209,9 +209,6 @@ const DemoModules = () => {
                                     </p>
                                 </div>
 
-                                <button className="mt-8 bg-sbos-navy hover:bg-sbos-royal text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 self-start active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-sbos-royal">
-                                    Try this module in demo
-                                </button>
                             </div>
 
                             {/* Right Visual Preview Column */}
@@ -312,9 +309,6 @@ const DemoModules = () => {
                                             </p>
                                         </div>
 
-                                        <button className="w-full bg-sbos-navy hover:bg-sbos-royal text-white px-6 py-3.5 rounded-xl font-semibold transition-all active:scale-95 text-sm">
-                                            Try this module in demo
-                                        </button>
                                     </div>
                                 </div>
                             </div>

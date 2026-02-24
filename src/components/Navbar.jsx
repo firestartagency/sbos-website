@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Menu, X } from 'lucide-react';
 import gsap from 'gsap';
+import CalendlyModal from './CalendlyModal';
 
 /**
  * Generates an SVG path string that traces a pill-shaped rounded rectangle.
@@ -37,6 +38,7 @@ const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [navSize, setNavSize] = useState({ w: 0, h: 0 });
+    const [bookingOpen, setBookingOpen] = useState(false);
 
     const navRef = useRef(null);
     const progressPathRef = useRef(null);
@@ -231,7 +233,7 @@ const Navbar = () => {
                     >
                         Take Fit Check
                     </a>
-                    <button className="bg-sbos-royal hover:bg-sbos-electric text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] hover:scale-[1.03] hover:shadow-lg hover:shadow-sbos-electric/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-sbos-electric focus-visible:ring-offset-2">
+                    <button onClick={() => setBookingOpen(true)} className="bg-sbos-royal hover:bg-sbos-electric text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] hover:scale-[1.03] hover:shadow-lg hover:shadow-sbos-electric/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-sbos-electric focus-visible:ring-offset-2">
                         Book a Demo
                     </button>
                 </div>
@@ -265,10 +267,11 @@ const Navbar = () => {
                 >
                     Take Fit Check
                 </a>
-                <button className="w-full bg-sbos-royal hover:bg-sbos-electric text-white px-6 py-3 mt-2 rounded-xl text-base font-semibold transition-transform duration-300 active:scale-95">
+                <button onClick={() => { setBookingOpen(true); setMobileMenuOpen(false); }} className="w-full bg-sbos-royal hover:bg-sbos-electric text-white px-6 py-3 mt-2 rounded-xl text-base font-semibold transition-transform duration-300 active:scale-95">
                     Book a Demo
                 </button>
             </div>
+            <CalendlyModal isOpen={bookingOpen} onClose={() => setBookingOpen(false)} />
         </nav>
     );
 };

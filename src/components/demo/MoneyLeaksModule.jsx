@@ -1,6 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { AlertCircle, ArrowDown, Link2, CircleDashed, DollarSign } from 'lucide-react';
+import { AlertCircle, ArrowDown, Link2, CircleDashed, DollarSign, Mail, Loader2, Send, CheckCircle2 } from 'lucide-react';
+import { sendExecutionPayload, isWebhookConfigured } from '../../services/webhookService';
+import { buildEmailHtml } from '../../services/emailTemplates';
 
 const severityConfig = {
     critical: { color: '#EF4444', bg: '#EF444412', label: 'Critical' },
@@ -15,9 +17,12 @@ const typeIcons = {
     overlap: AlertCircle,
 };
 
-const MoneyLeaksModule = ({ data }) => {
+const MoneyLeaksModule = ({ data, recipientEmail, branding }) => {
     const savingsRef = useRef(null);
     const spendRef = useRef(null);
+
+    // Execution layer state
+    const [sendStatus, setSendStatus] = useState('idle'); // 'idle' | 'sending' | 'sent' | 'error'
 
     useEffect(() => {
         if (!data) return;
@@ -55,6 +60,30 @@ const MoneyLeaksModule = ({ data }) => {
         }
     }, [data]);
 
+    // Handle sending the money leaks email
+    const handleSendReport = async () => {
+        if (!recipientEmail || sendStatus === 'sending') return;
+
+        setSendStatus('sending');
+        try {
+            const emailHtml = buildEmailHtml('money-leaks', data, branding);
+            const subject = `Weekly Money Leak Report — ${branding.companyName}`;
+
+            await sendExecutionPayload('money-leaks', recipientEmail, branding, {
+                emailHtml,
+                subject,
+                totalMonthlyWaste: `$${data.potentialSavings?.toLocaleString() || '0'}`,
+                leaks: data.leaks,
+                recommendations: data.leaks.map(l => l.recommendation).filter(Boolean),
+            });
+
+            setSendStatus('sent');
+        } catch (err) {
+            console.error('[MoneyLeaksModule] Send failed:', err);
+            setSendStatus('error');
+        }
+    };
+
     if (!data) return null;
 
     const savingsPercent = Math.round((data.potentialSavings / data.totalMonthlySpend) * 100);
@@ -62,6 +91,74 @@ const MoneyLeaksModule = ({ data }) => {
 
     return (
         <div className="space-y-6">
+            {/* ═══════════ EXECUTION LAYER: Money Leak Report ═══════════ */}
+            {isWebhookConfigured() && (
+                <div
+                    className="rounded-2xl border shadow-sm p-6 transition-all duration-300"
+                    style={{
+                        borderColor: sendStatus === 'sent' ? '#18C37E40' : '#F5A52430',
+                        backgroundColor: sendStatus === 'sent' ? '#18C37E08' : '#ffffff',
+                    }}
+                >
+                    <div className="flex items-start gap-4">
+                        <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{
+                                backgroundColor: sendStatus === 'sent' ? '#18C37E15' : '#F5A52415',
+                            }}
+                        >
+                            {sendStatus === 'sent' ? (
+                                <CheckCircle2 size={20} className="text-emerald-500" />
+                            ) : (
+                                <Mail size={20} className="text-amber-500" />
+                            )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-sbos-navy">
+                                {sendStatus === 'sent' ? 'Money leak report sent!' : 'Send Money Leak Report'}
+                            </h3>
+                            <p className="text-xs text-sbos-slate mt-0.5 leading-relaxed">
+                                {sendStatus === 'sent'
+                                    ? `Report delivered to ${recipientEmail}. Check your inbox.`
+                                    : 'Get this savings analysis delivered to your inbox as a branded report.'}
+                            </p>
+
+                            {sendStatus === 'error' && (
+                                <p className="text-xs text-red-500 mt-1.5 font-medium">
+                                    Something went wrong. Please try again.
+                                </p>
+                            )}
+                        </div>
+
+                        <button
+                            onClick={handleSendReport}
+                            disabled={sendStatus === 'sending' || !recipientEmail}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-white transition-all duration-200 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                                backgroundColor: sendStatus === 'sent' ? '#18C37E' : (branding?.primaryColor || '#2C3FB8'),
+                            }}
+                            onMouseEnter={(e) => { if (sendStatus !== 'sending') e.currentTarget.style.transform = 'scale(1.03)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                        >
+                            {sendStatus === 'sending' && <Loader2 size={14} className="animate-spin" />}
+                            {sendStatus === 'sent' && <CheckCircle2 size={14} />}
+                            {(sendStatus === 'idle' || sendStatus === 'error') && <Send size={14} />}
+                            {sendStatus === 'sending' ? 'Sending...'
+                                : sendStatus === 'sent' ? 'Resend'
+                                    : sendStatus === 'error' ? 'Retry'
+                                        : 'Send Report'}
+                        </button>
+                    </div>
+
+                    {!recipientEmail && sendStatus === 'idle' && (
+                        <p className="text-[10px] text-amber-500 mt-3 ml-14">
+                            No email provided during intake. Go back and add your email to enable this feature.
+                        </p>
+                    )}
+                </div>
+            )}
+
             {/* Summary Cards Row */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="bg-white rounded-2xl border border-sbos-navy/5 shadow-sm p-5">

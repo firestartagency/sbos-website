@@ -1,11 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { PlayCircle, CheckCircle2, AlertTriangle, FileText, ArrowRight, Activity, TrendingUp } from 'lucide-react';
+import CalendlyModal from './CalendlyModal';
 
 const Hero = () => {
     const sectionRef = useRef(null);
     const leftContentRef = useRef(null);
     const rightCompositionRef = useRef(null);
+    const [bookingOpen, setBookingOpen] = useState(false);
 
     useEffect(() => {
         const ctx = gsap.context(() => {
@@ -87,13 +89,13 @@ const Hero = () => {
 
                     {/* CTAs */}
                     <div className="flex flex-wrap items-center gap-4 mt-4">
-                        <button className="bg-sbos-royal hover:bg-sbos-electric text-white px-8 py-3.5 rounded-full text-base font-semibold transition-all duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] hover:scale-[1.03] hover:shadow-xl hover:-translate-y-1 hover:shadow-sbos-electric/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-sbos-electric focus-visible:ring-offset-2">
+                        <button onClick={() => setBookingOpen(true)} className="bg-sbos-royal hover:bg-sbos-electric text-white px-8 py-3.5 rounded-full text-base font-semibold transition-all duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] hover:scale-[1.03] hover:shadow-xl hover:-translate-y-1 hover:shadow-sbos-electric/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-sbos-electric focus-visible:ring-offset-2">
                             Book a Demo
                         </button>
-                        <button className="flex items-center gap-2 group bg-white border border-sbos-slate/20 hover:border-sbos-electric text-sbos-navy px-8 py-3.5 rounded-full text-base font-semibold transition-all duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] hover:shadow-sm hover:scale-[1.03]">
+                        <a href="#how-it-works" className="flex items-center gap-2 group bg-white border border-sbos-slate/20 hover:border-sbos-electric text-sbos-navy px-8 py-3.5 rounded-full text-base font-semibold transition-all duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)] hover:shadow-sm hover:scale-[1.03]">
                             <PlayCircle size={20} className="text-sbos-royal group-hover:text-sbos-electric transition-colors" />
                             See Demo Flow
-                        </button>
+                        </a>
                     </div>
 
                     {/* Proof Chips */}
@@ -192,6 +194,7 @@ const Hero = () => {
 
                 </div>
             </div>
+            <CalendlyModal isOpen={bookingOpen} onClose={() => setBookingOpen(false)} />
         </section>
     );
 };

@@ -6,6 +6,7 @@ import {
     ArrowLeft, ChevronRight, Building2, Loader2, CheckCircle2, AlertCircle
 } from 'lucide-react';
 
+
 import { useTheme } from '../context/ThemeContext';
 import { runAnalysis, isApiKeyConfigured } from '../services/geminiAgents';
 
@@ -35,6 +36,7 @@ const DemoResults = () => {
     const [moduleStatus, setModuleStatus] = useState({}); // 'loading' | 'done' | 'error'
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [usingSample, setUsingSample] = useState(false);
+
     const contentRef = useRef(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -139,17 +141,25 @@ const DemoResults = () => {
             );
         }
 
+        // Build branding object from theme for execution layers
+        const branding = {
+            primaryColor: theme.brandPrimary || '#2C3FB8',
+            accentColor: theme.brandAccent || '#3366FF',
+            companyName: theme.companyName || intakeData?.companyName || 'SBOS',
+        };
+        const recipientEmail = intakeData?.recipientEmail || '';
+
         switch (activeTab) {
             case 'diagnostic':
-                return <DiagnosticModule data={data} />;
+                return <DiagnosticModule data={data} recipientEmail={recipientEmail} branding={branding} />;
             case 'money-leaks':
-                return <MoneyLeaksModule data={data} />;
+                return <MoneyLeaksModule data={data} recipientEmail={recipientEmail} branding={branding} />;
             case 'growth-plan':
-                return <GrowthPlanModule data={data} />;
+                return <GrowthPlanModule data={data} recipientEmail={recipientEmail} branding={branding} intakeData={intakeData} />;
             case 'sop-builder':
-                return <SopBuilderModule data={data} />;
+                return <SopBuilderModule data={data} recipientEmail={recipientEmail} branding={branding} />;
             case 'lead-auto':
-                return <LeadAutomationModule data={data} />;
+                return <LeadAutomationModule data={data} recipientEmail={recipientEmail} branding={branding} />;
             default:
                 return null;
         }
@@ -197,9 +207,6 @@ const DemoResults = () => {
                             <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: usingSample ? '#10b981' : 'var(--brand-accent)' }} />
                             {usingSample ? 'Sample Data Active' : isAnalyzing ? `Analyzing (${completedCount}/5)` : 'Analysis Complete'}
                         </span>
-                        <button className="text-white px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 hover:scale-[1.03]" style={{ backgroundColor: 'var(--brand-primary)' }}>
-                            Book Walkthrough
-                        </button>
                     </div>
                 </div>
             </header>
@@ -267,18 +274,20 @@ const DemoResults = () => {
                             </div>
 
                             {/* Bottom CTA */}
-                            <div className="hidden lg:block mt-6 p-4 rounded-2xl bg-sbos-navy/[0.03] border border-sbos-navy/5">
-                                <p className="text-xs text-sbos-slate leading-relaxed mb-3">
-                                    Want these results with <strong>your</strong> business data?
-                                </p>
-                                <button
-                                    onClick={() => navigate('/demo')}
-                                    className="w-full text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300"
-                                    style={{ backgroundColor: 'var(--brand-primary)' }}
-                                >
-                                    {usingSample ? 'Run With Your Data' : 'Book Walkthrough'}
-                                </button>
-                            </div>
+                            {usingSample && (
+                                <div className="hidden lg:block mt-6 p-4 rounded-2xl bg-sbos-navy/[0.03] border border-sbos-navy/5">
+                                    <p className="text-xs text-sbos-slate leading-relaxed mb-3">
+                                        Want these results with <strong>your</strong> business data?
+                                    </p>
+                                    <button
+                                        onClick={() => navigate('/demo')}
+                                        className="w-full text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300"
+                                        style={{ backgroundColor: 'var(--brand-primary)' }}
+                                    >
+                                        Run With Your Data
+                                    </button>
+                                </div>
+                            )}
                         </nav>
                     </aside>
 
@@ -318,6 +327,7 @@ const DemoResults = () => {
                 analysisResults={moduleData}
                 companyName={companyName}
             />
+
         </div>
     );
 };

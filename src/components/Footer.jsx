@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PlayCircle, Target } from 'lucide-react';
+import CalendlyModal from './CalendlyModal';
 
 const Footer = () => {
+    const [bookingOpen, setBookingOpen] = useState(false);
     return (
         <footer className="bg-[#0A0D1C] text-white pt-24 pb-8 relative overflow-hidden rounded-t-[2.5rem] mt-[-2rem] z-20">
 
@@ -25,7 +27,7 @@ const Footer = () => {
                             <button className="w-full sm:w-auto bg-sbos-royal hover:bg-sbos-electric text-white px-10 py-4 rounded-full text-base font-semibold transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-sbos-electric/25">
                                 Open Demo
                             </button>
-                            <button className="w-full sm:w-auto flex items-center justify-center gap-2 group bg-white/5 border border-white/10 hover:border-white/30 hover:bg-white/10 text-white px-8 py-4 rounded-full text-base font-semibold transition-all duration-300">
+                            <button onClick={() => setBookingOpen(true)} className="w-full sm:w-auto flex items-center justify-center gap-2 group bg-white/5 border border-white/10 hover:border-white/30 hover:bg-white/10 text-white px-8 py-4 rounded-full text-base font-semibold transition-all duration-300">
                                 <PlayCircle size={20} className="text-sbos-ice group-hover:text-white transition-colors" />
                                 Book Walkthrough
                             </button>
@@ -70,7 +72,7 @@ const Footer = () => {
                             <ul className="space-y-3">
                                 <li><a href="#" className="text-sbos-slate hover:text-white text-sm transition-colors">About Us</a></li>
                                 <li><a href="#" className="text-sbos-slate hover:text-white text-sm transition-colors">Contact</a></li>
-                                <li><a href="#" className="text-sbos-slate text-sm">Book a Walkthrough</a></li>
+                                <li><button onClick={() => setBookingOpen(true)} className="text-sbos-slate hover:text-white text-sm transition-colors text-left">Book a Walkthrough</button></li>
                             </ul>
                         </div>
 
@@ -96,6 +98,7 @@ const Footer = () => {
                 </div>
 
             </div>
+            <CalendlyModal isOpen={bookingOpen} onClose={() => setBookingOpen(false)} />
         </footer>
     );
 };

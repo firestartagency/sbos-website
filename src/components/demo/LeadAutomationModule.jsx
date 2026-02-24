@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Mail, MessageSquare, Phone, ChevronDown, ChevronUp, Target, BarChart3 } from 'lucide-react';
+import { Mail, MessageSquare, Phone, ChevronDown, ChevronUp, Target, BarChart3, Users, Send, Loader2, CheckCircle2, Building2, Globe, Sparkles } from 'lucide-react';
+import { sendExecutionPayload, isWebhookConfigured } from '../../services/webhookService';
+import { buildEmailHtml } from '../../services/emailTemplates';
 
 const channelConfig = {
     email: { icon: Mail, color: '#3366FF', bg: '#3366FF12', label: 'Email' },
@@ -17,17 +19,193 @@ const typeLabels = {
     breakup: 'Breakup',
 };
 
-const LeadAutomationModule = ({ data }) => {
+const statusBadges = {
+    new: { label: 'New', color: '#3366FF', bg: '#3366FF12' },
+    'email-sent': { label: 'Email Sent', color: '#18C37E', bg: '#18C37E12' },
+    sending: { label: 'Sending…', color: '#F5A524', bg: '#F5A52412' },
+    error: { label: 'Error', color: '#EF4444', bg: '#EF444412' },
+};
+
+const LeadAutomationModule = ({ data, recipientEmail, branding }) => {
     const [expandedTouch, setExpandedTouch] = useState(0);
+    const [showCrm, setShowCrm] = useState(false);
+    const [clientStatuses, setClientStatuses] = useState({}); // { [idx]: 'new'|'sending'|'email-sent'|'error' }
 
     if (!data) return null;
+
+    const clients = data.dummyClients || [];
+    const firstTouch = data.touches?.[0];
 
     const toggleTouch = (idx) => {
         setExpandedTouch(prev => prev === idx ? -1 : idx);
     };
 
+    const handleSendFirstEmail = async (clientIdx) => {
+        const client = clients[clientIdx];
+        if (!client || clientStatuses[clientIdx] === 'sending') return;
+
+        setClientStatuses(prev => ({ ...prev, [clientIdx]: 'sending' }));
+
+        try {
+            // Personalize the first touch message body
+            const personalizedBody = (firstTouch?.body || '')
+                .replace(/\{\{name\}\}/g, client.name.split(' ')[0])
+                .replace(/\{\{company\}\}/g, client.company)
+                .replace(/\{\{sender\}\}/g, branding?.companyName || 'SBOS');
+
+            const emailHtml = buildEmailHtml('lead-email', {
+                subject: (firstTouch?.subject || 'Hello from {{company}}')
+                    .replace(/\{\{name\}\}/g, client.name.split(' ')[0])
+                    .replace(/\{\{company\}\}/g, client.company),
+                body: personalizedBody,
+                clientName: client.name,
+                clientCompany: client.company,
+            }, branding);
+
+            const subject = (firstTouch?.subject || `Hello from ${branding?.companyName}`)
+                .replace(/\{\{name\}\}/g, client.name.split(' ')[0])
+                .replace(/\{\{company\}\}/g, client.company);
+
+            // Use the demo recipient email (not the dummy client email) for actual delivery
+            await sendExecutionPayload('lead-email', recipientEmail || client.email, branding, {
+                emailHtml,
+                subject,
+                clientName: client.name,
+                clientCompany: client.company,
+                clientEmail: client.email,
+            });
+
+            setClientStatuses(prev => ({ ...prev, [clientIdx]: 'email-sent' }));
+        } catch (err) {
+            console.error('[LeadAutomationModule] Send failed:', err);
+            setClientStatuses(prev => ({ ...prev, [clientIdx]: 'error' }));
+        }
+    };
+
     return (
         <div className="space-y-6">
+            {/* ═══════════ EXECUTION LAYER: Demo CRM ═══════════ */}
+            {isWebhookConfigured() && clients.length > 0 && (
+                <div className="rounded-2xl border border-pink-200/50 shadow-sm overflow-hidden bg-white">
+                    {/* CRM Toggle Header */}
+                    <button
+                        onClick={() => setShowCrm(!showCrm)}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-sbos-cloud/30 transition-colors"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center">
+                                <Users size={20} className="text-pink-500" />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="text-sm font-semibold text-sbos-navy">Demo CRM</h3>
+                                <p className="text-xs text-sbos-slate">
+                                    {clients.length} leads • Send the first touchpoint email
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-pink-50 text-pink-500 font-semibold">
+                                DEMO DATA
+                            </span>
+                            {showCrm ? <ChevronUp size={16} className="text-sbos-slate" /> : <ChevronDown size={16} className="text-sbos-slate" />}
+                        </div>
+                    </button>
+
+                    {/* CRM Client Cards */}
+                    {showCrm && (
+                        <div className="px-6 pb-6 space-y-3">
+                            <p className="text-[10px] text-sbos-slate mb-2">
+                                These are AI-generated sample leads. Click "Send First Email" to trigger the Day 0 welcome message via N8N.
+                                {recipientEmail && <span className="font-medium"> Emails will be delivered to <span className="text-sbos-navy">{recipientEmail}</span>.</span>}
+                            </p>
+
+                            {clients.map((client, idx) => {
+                                const status = clientStatuses[idx] || client.status || 'new';
+                                const badge = statusBadges[status] || statusBadges.new;
+                                const isFeatured = idx === 0;
+
+                                return (
+                                    <div
+                                        key={idx}
+                                        className={`rounded-xl border p-4 transition-all duration-300 ${status === 'email-sent'
+                                            ? 'border-emerald-200 bg-emerald-50/30'
+                                            : isFeatured
+                                                ? 'border-pink-200 bg-pink-50/20'
+                                                : 'border-sbos-navy/5 bg-white'
+                                            }`}
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            {/* Avatar */}
+                                            <div
+                                                className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                                                style={{ backgroundColor: branding?.primaryColor || '#2C3FB8' }}
+                                            >
+                                                {client.name.split(' ').map(n => n[0]).join('')}
+                                            </div>
+
+                                            {/* Client Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-sm font-semibold text-sbos-navy">{client.name}</span>
+                                                    <span
+                                                        className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                                                        style={{ backgroundColor: badge.bg, color: badge.color }}
+                                                    >
+                                                        {badge.label}
+                                                    </span>
+                                                    {isFeatured && status === 'new' && (
+                                                        <span className="text-[10px] font-semibold text-pink-500 flex items-center gap-0.5">
+                                                            <Sparkles size={10} /> Featured
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-3 mt-1 text-xs text-sbos-slate">
+                                                    <span className="flex items-center gap-1">
+                                                        <Building2 size={10} />
+                                                        {client.company}
+                                                    </span>
+                                                    <span className="text-sbos-navy/10">|</span>
+                                                    <span>{client.industry}</span>
+                                                </div>
+                                                <p className="text-xs text-sbos-slate mt-1.5 leading-relaxed">{client.goals}</p>
+                                                {client.notes && (
+                                                    <p className="text-[10px] text-sbos-slate/70 mt-1 italic flex items-center gap-1">
+                                                        <Sparkles size={9} className="text-sbos-electric" />
+                                                        {client.notes}
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            {/* Send Button */}
+                                            <button
+                                                onClick={() => handleSendFirstEmail(idx)}
+                                                disabled={status === 'sending' || status === 'email-sent' || (!recipientEmail && !client.email)}
+                                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold text-white transition-all duration-200 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                style={{
+                                                    backgroundColor: status === 'email-sent' ? '#18C37E'
+                                                        : status === 'error' ? '#EF4444'
+                                                            : (branding?.primaryColor || '#2C3FB8'),
+                                                }}
+                                                onMouseEnter={(e) => { if (status === 'new' || status === 'error') e.currentTarget.style.transform = 'scale(1.03)'; }}
+                                                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                                            >
+                                                {status === 'sending' && <Loader2 size={12} className="animate-spin" />}
+                                                {status === 'email-sent' && <CheckCircle2 size={12} />}
+                                                {(status === 'new' || status === 'error') && <Send size={12} />}
+                                                {status === 'sending' ? 'Sending…'
+                                                    : status === 'email-sent' ? 'Sent ✓'
+                                                        : status === 'error' ? 'Retry'
+                                                            : 'Send First Email'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Sequence Header */}
             <div className="bg-white rounded-2xl border border-sbos-navy/5 shadow-sm p-6">
                 <div className="flex items-start justify-between flex-wrap gap-4">
@@ -172,8 +350,10 @@ const LeadAutomationModule = ({ data }) => {
                     })()}
                 </div>
             )}
+
         </div>
     );
 };
 
 export default LeadAutomationModule;
+

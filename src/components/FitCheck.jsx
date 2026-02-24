@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { Check, ArrowRight } from 'lucide-react';
+import CalendlyModal from './CalendlyModal';
 
 const fitCriteria = [
     "We're using too many disconnected tools.",
@@ -12,21 +13,26 @@ const fitCriteria = [
 
 const FitCheck = () => {
     const [selectedCriteria, setSelectedCriteria] = useState([]);
+    const [bookingOpen, setBookingOpen] = useState(false);
     const sectionRef = useRef(null);
 
     const score = selectedCriteria.length;
 
     let outcomeText = "Select your current challenges above.";
     let ctaText = "Explore Features";
+    let shouldBook = false;
     if (score > 0 && score <= 2) {
-        outcomeText = "Worth exploring to fix immediate gaps.";
-        ctaText = "See Demo Modules";
+        outcomeText = "Worth exploring — let's walk through it together.";
+        ctaText = "Book a Walkthrough";
+        shouldBook = true;
     } else if (score >= 3 && score <= 4) {
         outcomeText = "Strong fit. SBOS can consolidate your workflow.";
         ctaText = "Book a Walkthrough";
+        shouldBook = true;
     } else if (score === 5) {
         outcomeText = "Perfect match. You need an operating system yesterday.";
         ctaText = "Book a Walkthrough";
+        shouldBook = true;
     }
 
     const toggleCriterion = (index) => {
@@ -107,10 +113,24 @@ const FitCheck = () => {
                             {outcomeText}
                         </p>
 
-                        <button className="flex items-center justify-center gap-2 bg-sbos-royal hover:bg-sbos-electric text-white w-full py-3.5 rounded-xl font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-sbos-electric/20 active:scale-95 group">
-                            {ctaText}
-                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                        </button>
+                        {shouldBook ? (
+                            <button
+                                onClick={() => setBookingOpen(true)}
+                                className="flex items-center justify-center gap-2 bg-sbos-royal hover:bg-sbos-electric text-white w-full py-3.5 rounded-xl font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-sbos-electric/20 active:scale-95 group"
+                            >
+                                {ctaText}
+                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                        ) : (
+                            <a
+                                href="#demo"
+                                className="flex items-center justify-center gap-2 bg-sbos-royal hover:bg-sbos-electric text-white w-full py-3.5 rounded-xl font-semibold transition-all duration-300 hover:shadow-lg hover:shadow-sbos-electric/20 active:scale-95 group"
+                            >
+                                {ctaText}
+                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                            </a>
+                        )}
+                        <CalendlyModal isOpen={bookingOpen} onClose={() => setBookingOpen(false)} />
                     </div>
 
                 </div>

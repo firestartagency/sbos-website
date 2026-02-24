@@ -63,6 +63,7 @@ const bgPresets = [
 /* ─────────── sample data for skip ─────────── */
 const sampleData = {
     companyName: 'Acme Local Services',
+    recipientEmail: 'demo@example.com',
     teamSize: 12,
     revenueRange: '$500K – $1M',
     goals: ['Reduce wasted spend', 'Streamline operations', 'Automate follow-up'],
@@ -111,6 +112,7 @@ const DemoIntake = () => {
 
     // Screen 0: Branding state
     const [companyName, setCompanyName] = useState(theme.companyName || '');
+    const [recipientEmail, setRecipientEmail] = useState('');
     const [brandPrimary, setBrandPrimary] = useState(theme.brandPrimary || '#2C3FB8');
     const [brandAccent, setBrandAccent] = useState(theme.brandAccent || '#3366FF');
     const [bgColor, setBgColor] = useState(theme.bgTint || '#F8FAFF');
@@ -216,6 +218,7 @@ const DemoIntake = () => {
     const handleSubmit = () => {
         const intakeData = {
             companyName,
+            recipientEmail,
             teamSize: parseInt(teamSize) || 0,
             revenueRange,
             goals,
@@ -252,7 +255,7 @@ const DemoIntake = () => {
 
     const canProceed = () => {
         if (currentStep === 0) {
-            return companyName.trim(); // Only company name required
+            return companyName.trim() && recipientEmail.trim(); // Company name + email required
         }
         if (currentStep === 1) {
             return teamSize && revenueRange && goals.length > 0 && bottleneck;
@@ -351,6 +354,25 @@ const DemoIntake = () => {
                                         className="w-full pl-10 pr-4 py-3 bg-white rounded-xl border border-sbos-navy/10 text-sm text-sbos-navy placeholder:text-sbos-slate/40 focus:outline-none focus:border-sbos-electric focus:ring-2 focus:ring-sbos-electric/10 transition-all"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Recipient Email */}
+                            <div>
+                                <label className="block text-sm font-semibold text-sbos-navy mb-1.5">
+                                    Your email <span className="text-red-400">*</span>
+                                    <span className="font-normal text-sbos-slate ml-1">(for demo reports)</span>
+                                </label>
+                                <div className="relative">
+                                    <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sbos-slate/40" />
+                                    <input
+                                        type="email"
+                                        value={recipientEmail}
+                                        onChange={(e) => setRecipientEmail(e.target.value)}
+                                        placeholder="you@yourcompany.com"
+                                        className="w-full pl-10 pr-4 py-3 bg-white rounded-xl border border-sbos-navy/10 text-sm text-sbos-navy placeholder:text-sbos-slate/40 focus:outline-none focus:border-sbos-electric focus:ring-2 focus:ring-sbos-electric/10 transition-all"
+                                    />
+                                </div>
+                                <p className="text-[10px] text-sbos-slate/60 mt-1.5 ml-1">SBOS will send demo reports to this address. No spam, ever.</p>
                             </div>
 
                             {/* Logo Upload */}
